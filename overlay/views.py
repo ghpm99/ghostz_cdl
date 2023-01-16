@@ -3,7 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import add_cors_react_dev
-from overlay.models import Overlay, Team, Character, User, BDOClass, ImageBDOClass
+from overlay.models import Overlay, Team, Character, User, BDOClass
 
 
 # Create your views here.
@@ -69,7 +69,6 @@ def get_active_overlay(request):
             } for bdo_image in bdo_class_object.images.all()]
         }
         return data
-
 
     def userCustomVideo(family):
         user = User.objects.filter(family=family).first()

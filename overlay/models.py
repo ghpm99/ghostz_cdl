@@ -47,6 +47,7 @@ class BDOClass(models.Model):
     def __str__(self):
         return f'{self.name}'
 
+
 class ImageBDOClass(models.Model):
     bdo_class = models.ForeignKey(BDOClass, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='classimage/')
@@ -56,3 +57,8 @@ class ImageBDOClass(models.Model):
 class User(models.Model):
     family = models.TextField()
     video = models.FileField(upload_to='customvideo/', null=True)
+
+
+class Background(models.Model):
+    modality = models.TextField()
+    image = models.ImageField(upload_to='background/')
