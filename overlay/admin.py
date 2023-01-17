@@ -1,5 +1,5 @@
 from django.contrib import admin
-from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User
+from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background
 
 
 # Register your models here.
@@ -34,9 +34,15 @@ class UserConfig(admin.ModelAdmin):
     pass
 
 
+class BackgroundConfig(admin.ModelAdmin):
+    list_display = ('id', 'modality')
+    pass
+
+
 admin.site.register(Overlay, OverlayConfig)
 admin.site.register(Team, TeamConfig)
 admin.site.register(Character, CharacterConfig)
 admin.site.register(BDOClass, BDOClassConfig)
 admin.site.register(ImageBDOClass, ImageBDOClassConfig)
 admin.site.register(User, UserConfig)
+admin.site.register(Background, BackgroundConfig)

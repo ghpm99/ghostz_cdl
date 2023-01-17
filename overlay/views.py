@@ -3,7 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import add_cors_react_dev
-from overlay.models import Overlay, Team, Character, User, BDOClass
+from overlay.models import Overlay, Team, Character, User, BDOClass, Background
+from django.conf import settings
 
 
 # Create your views here.
@@ -52,6 +53,8 @@ def get_active_overlay(request):
     if overlay_object is None:
         overlay_object = Overlay.objects.first()
 
+    background = Background.objects.filter(modality__icontains=overlay_object.modality).first()
+
     def BDOClassImages(bdo_class):
         bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
         if bdo_class_object is None:
@@ -61,10 +64,10 @@ def get_active_overlay(request):
                 'images': []
             }
         data = {
-            'video_awakening': bdo_class_object.video_awakening.url,
-            'video_sucession': bdo_class_object.video_sucession.url,
+            'video_awakening': settings.BASE_URL + bdo_class_object.video_awakening.url,
+            'video_sucession': settings.BASE_URL + bdo_class_object.video_sucession.url,
             'images': [{
-                'url': bdo_image.image.url,
+                'url': settings.BASE_URL + bdo_image.image.url,
                 'awakening': bdo_image.awakening
             } for bdo_image in bdo_class_object.images.all()]
         }
@@ -78,7 +81,7 @@ def get_active_overlay(request):
             }
         print(user.video)
         return {
-            'video': user.video.url
+            'video': settings.BASE_URL + user.video.url
         }
 
     data = {
@@ -86,6 +89,7 @@ def get_active_overlay(request):
         'date': overlay_object.date,
         'hour': overlay_object.hour,
         'modality': overlay_object.modality,
+        'background': settings.BASE_URL + background.image.url if background else '',
         'active': overlay_object.active,
         'team': [{
             'id': team.id,
