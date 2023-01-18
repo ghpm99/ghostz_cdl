@@ -13,7 +13,7 @@ from lib import pusher
 @require_GET
 def get_overlay(request):
 
-    overlay_objects = Overlay.objects.all()
+    overlay_objects = Overlay.objects.all().order_by('id')
 
     data = [{
         'id': overlay.id,
@@ -133,7 +133,6 @@ def update_overlay_active(request, id):
 
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
-    print(overlay)
     overlay.active = True
     overlay.save()
 
