@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import add_cors_react_dev
 from overlay.models import Overlay, Team, Character, User, BDOClass, Background
 from django.conf import settings
+from lib import pusher
 
 
 # Create your views here.
@@ -79,7 +80,6 @@ def get_active_overlay(request):
             return {
                 'video': ''
             }
-        print(user.video)
         return {
             'video': settings.BASE_URL + user.video.url
         }
@@ -130,8 +130,76 @@ def update_overlay_active(request, id):
             overlay.save()
 
     overlay = Overlay.objects.filter(id=id).first()
+
+    if overlay is None:
+        return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
+    print(overlay)
     overlay.active = True
     overlay.save()
+
+    background = Background.objects.filter(modality__icontains=overlay.modality).first()
+
+    def BDOClassImages(bdo_class):
+        bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
+        if bdo_class_object is None:
+            return {
+                'video_awakening': '',
+                'video_sucession': '',
+                'images': []
+            }
+        data = {
+            'video_awakening': settings.BASE_URL + bdo_class_object.video_awakening.url,
+            'video_sucession': settings.BASE_URL + bdo_class_object.video_sucession.url,
+            'images': [{
+                'url': settings.BASE_URL + bdo_image.image.url,
+                'awakening': bdo_image.awakening
+            } for bdo_image in bdo_class_object.images.all()]
+        }
+        return data
+
+    def userCustomVideo(family):
+        user = User.objects.filter(family=family).first()
+        if user is None or not user.video:
+            return {
+                'video': ''
+            }
+        return {
+            'video': settings.BASE_URL + user.video.url
+        }
+
+    data = {
+        'id': overlay.id,
+        'date': overlay.date,
+        'hour': overlay.hour,
+        'modality': overlay.modality,
+        'background': settings.BASE_URL + background.image.url if background else '',
+        'active': overlay.active,
+        'team': [{
+            'id': team.id,
+            'name': team.name,
+            'twitch': team.twitch,
+            'mmr': team.mmr,
+            'mmr_as': team.mmr_as,
+            'characteres': [{
+                'id': character.id,
+                'family': character.family,
+                'name': character.name,
+                'bdo_class': character.bdo_class,
+                'combat_style': character.combat_style,
+                'matches': character.matches,
+                'defeats': character.defeats,
+                'victories': character.victories,
+                'champion': character.champion,
+                'dr': character.dr,
+                'by': character.by,
+                'walkover': character.walkover,
+                'media': BDOClassImages(character.bdo_class),
+                'custom': userCustomVideo(character.family)
+            } for character in team.character_set.all()]
+        } for team in overlay.team_set.all()]
+    }
+
+    pusher.send_active_overlay(data)
 
     return JsonResponse({'status': 'Overlay atualizado com sucesso!'})
 
