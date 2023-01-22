@@ -9,12 +9,12 @@ class OverlayConfig(admin.ModelAdmin):
 
 
 class TeamConfig(admin.ModelAdmin):
-    list_display = ('overlay', 'name', 'twitch')
+    list_display = ('id', 'overlay', 'name', 'twitch')
     pass
 
 
 class CharacterConfig(admin.ModelAdmin):
-    list_display = ('family', 'name', 'bdo_class')
+    list_display = ('id', 'family', 'name', 'bdo_class')
     pass
 
 
