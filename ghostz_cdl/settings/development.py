@@ -1,7 +1,8 @@
-from dotenv import load_dotenv
 import os
-from ghostz_cdl.settings.base import *
 
+from dotenv import load_dotenv
+
+from ghostz_cdl.settings.base import *
 
 load_dotenv()
 

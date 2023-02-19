@@ -2,7 +2,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from ghostz_cdl.decorators import add_cors_react_dev
+from ghostz_cdl.decorators import add_cors_react_dev, validate_user
 from overlay.models import Overlay, Team, Character, User, BDOClass, Background
 from django.conf import settings
 from lib import pusher
@@ -11,7 +11,8 @@ from lib import pusher
 # Create your views here.
 @add_cors_react_dev
 @require_GET
-def get_overlay(request):
+@validate_user
+def get_overlay(request, user):
 
     overlay_objects = Overlay.objects.all().order_by('id')
 
@@ -49,7 +50,8 @@ def get_overlay(request):
 
 @add_cors_react_dev
 @require_GET
-def get_active_overlay(request):
+@validate_user
+def get_active_overlay(request, user):
     overlay_object = Overlay.objects.filter(active=True).first()
     if overlay_object is None:
         overlay_object = Overlay.objects.first()
@@ -121,8 +123,9 @@ def get_active_overlay(request):
 
 @csrf_exempt
 @add_cors_react_dev
+@validate_user
 @require_POST
-def update_overlay_active(request, id):
+def update_overlay_active(request, id, user):
     overlay_active = Overlay.objects.filter(active=True).all()
     if overlay_active.__len__() > 0:
         for overlay in overlay_active:
@@ -205,8 +208,9 @@ def update_overlay_active(request, id):
 
 @csrf_exempt
 @add_cors_react_dev
+@validate_user
 @require_POST
-def import_json(request):
+def import_json(request, user):
     data = json.loads(request.body)
     for overlay_data in data:
         overlay = Overlay(
@@ -262,8 +266,9 @@ def import_json(request):
 
 @csrf_exempt
 @add_cors_react_dev
+@validate_user
 @require_POST
-def reload_overlay(request):
+def reload_overlay(request, user):
 
     overlay = Overlay.objects.filter(active=True).first()
 

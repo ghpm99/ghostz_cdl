@@ -20,6 +20,7 @@ from django.conf import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('auth/', include('authentication.urls')),
     path('pusher/', include('pusher_webhook.urls')),
     path('overlay/', include('overlay.urls')),
 ]
