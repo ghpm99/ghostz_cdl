@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # Create your models here.
@@ -7,6 +8,7 @@ class Overlay(models.Model):
     hour = models.TextField()
     modality = models.TextField()
     active = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
 
     def __str__(self) -> str:
         return f'Id: {self.id} Data: {self.date} Hora: {self.hour}'

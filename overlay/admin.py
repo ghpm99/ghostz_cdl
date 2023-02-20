@@ -1,5 +1,6 @@
 from django.contrib import admin
 from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background
+from authentication.models import AccessToken
 
 
 # Register your models here.
@@ -39,6 +40,11 @@ class BackgroundConfig(admin.ModelAdmin):
     pass
 
 
+class AccessTokenConfig(admin.ModelAdmin):
+    list_display = ('id', 'user')
+    pass
+
+
 admin.site.register(Overlay, OverlayConfig)
 admin.site.register(Team, TeamConfig)
 admin.site.register(Character, CharacterConfig)
@@ -46,3 +52,4 @@ admin.site.register(BDOClass, BDOClassConfig)
 admin.site.register(ImageBDOClass, ImageBDOClassConfig)
 admin.site.register(User, UserConfig)
 admin.site.register(Background, BackgroundConfig)
+admin.site.register(AccessToken, AccessTokenConfig)

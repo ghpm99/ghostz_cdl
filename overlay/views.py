@@ -2,7 +2,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from ghostz_cdl.decorators import add_cors_react_dev, validate_user
+from ghostz_cdl.decorators import add_cors_react_dev, validate_user, validate_pusher_user
 from overlay.models import Overlay, Team, Character, User, BDOClass, Background
 from django.conf import settings
 from lib import pusher
@@ -50,11 +50,14 @@ def get_overlay(request, user):
 
 @add_cors_react_dev
 @require_GET
-@validate_user
+@validate_pusher_user
 def get_active_overlay(request, user):
     overlay_object = Overlay.objects.filter(active=True).first()
     if overlay_object is None:
         overlay_object = Overlay.objects.first()
+
+    if overlay_object is None:
+        return JsonResponse({'msg': 'Overlay not found.'}, status=404)
 
     background = Background.objects.filter(modality__icontains=overlay_object.modality).first()
 

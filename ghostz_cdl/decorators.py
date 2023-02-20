@@ -1,7 +1,7 @@
 from base64 import b64decode
-from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
+from authentication.models import AccessToken
 
 
 def add_cors_react_dev(func):
@@ -88,6 +88,32 @@ def validate_super_user(func):
                 'msg': 'Error processing user data.',
                 'input': b64decode(user_data).decode('utf-8'),
                 'expected_input': 'base64(<user_id>|<username>)',
+            }, status=500)
+
+        return func(request, user=user, *args, **kwargs)
+
+    return inner
+
+
+def validate_pusher_user(func):
+    def inner(request, *args, **kwargs):
+        try:
+            user_data = request.META.get('HTTP_AUTHORIZATION')[6:] if request.META.get('HTTP_AUTHORIZATION') else None
+            print(user_data)
+            if not user_data:
+                return JsonResponse({
+                    'msg': 'Empty authorization.'
+                }, status=403)
+
+            user = AccessToken.objects.filter(token=user_data).first().user
+            print(user)
+            if not user:
+                return JsonResponse({'msg': 'User not found.'}, status=401)
+        except Exception:
+            return JsonResponse({
+                'msg': 'Error processing user data.',
+                'input': user_data,
+                'expected_input': 'token',
             }, status=500)
 
         return func(request, user=user, *args, **kwargs)
