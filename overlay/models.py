@@ -8,7 +8,7 @@ class Overlay(models.Model):
     hour = models.TextField()
     modality = models.TextField()
     active = models.BooleanField(default=False)
-    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
 
     def __str__(self) -> str:
         return f'Id: {self.id} Data: {self.date} Hora: {self.hour}'
