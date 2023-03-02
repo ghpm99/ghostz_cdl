@@ -22,6 +22,12 @@ DATABASES = {
     }
 }
 
+BASE_URL = 'https://overlay.ghostz.com.br'
+
+BASE_URL_WEBHOOK = 'https://overlay.ghostz.com.br'
+
+BASE_URL_FRONTEND = 'https://ghostz-cdl-dash.vercel.app'
+
 try:
     from ghostz_cdl.settings.local_settings import *  # noqa: F403, F401
 except ImportError:
