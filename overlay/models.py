@@ -57,7 +57,7 @@ class ImageBDOClass(models.Model):
 
 
 class User(models.Model):
-    family = models.TextField()
+    family = models.TextField(unique=True)
     video = models.FileField(upload_to='customvideo/', null=True)
 
 
