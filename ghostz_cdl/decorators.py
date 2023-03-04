@@ -99,14 +99,14 @@ def validate_pusher_user(func):
     def inner(request, *args, **kwargs):
         try:
             user_data = request.META.get('HTTP_AUTHORIZATION')[6:] if request.META.get('HTTP_AUTHORIZATION') else None
-            print(user_data)
+
             if not user_data:
                 return JsonResponse({
                     'msg': 'Empty authorization.'
                 }, status=403)
 
             user = AccessToken.objects.filter(token=user_data).first().user
-            print(user)
+
             if not user:
                 return JsonResponse({'msg': 'User not found.'}, status=401)
         except Exception:
