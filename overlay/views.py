@@ -214,7 +214,16 @@ def update_overlay_active(request, id, user):
 @validate_user
 @require_POST
 def import_json(request, user):
-    data = json.loads(request.body)
+    req = json.loads(request.body) if request.body else {}
+
+    if req.get('reset') is True:
+        Overlay.objects.all().delete()
+
+    if req.get('data') is None:
+        return JsonResponse({'status': 'Nao existe dada para ser importado!'}, status=400)
+
+    data = json.loads(req.get('data')) if req.get('data') else []
+
     for overlay_data in data:
         overlay = Overlay(
             date=overlay_data['Data'],
