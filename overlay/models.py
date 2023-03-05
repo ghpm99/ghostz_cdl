@@ -8,6 +8,7 @@ class Overlay(models.Model):
     hour = models.TextField()
     modality = models.TextField()
     active = models.BooleanField(default=False)
+    league = models.TextField(default='')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
 
     def __str__(self) -> str:

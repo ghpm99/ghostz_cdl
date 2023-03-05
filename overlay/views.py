@@ -94,6 +94,7 @@ def get_active_overlay(request, user):
         'date': overlay_object.date,
         'hour': overlay_object.hour,
         'modality': overlay_object.modality,
+        'league': overlay_object.league,
         'background': settings.BASE_URL + background.image.url if background else '',
         'active': overlay_object.active,
         'team': [{
@@ -177,6 +178,7 @@ def update_overlay_active(request, id, user):
         'date': overlay.date,
         'hour': overlay.hour,
         'modality': overlay.modality,
+        'league': overlay.league,
         'background': settings.BASE_URL + background.image.url if background else '',
         'active': overlay.active,
         'team': [{
@@ -228,7 +230,8 @@ def import_json(request, user):
         overlay = Overlay(
             date=overlay_data['Data'],
             hour=overlay_data['Horario'],
-            modality=overlay_data['Modalidade']
+            modality=overlay_data['Modalidade'],
+            league=overlay_data['LIGA']
         )
         overlay.save()
 
@@ -322,6 +325,7 @@ def reload_overlay(request, user):
         'date': overlay.date,
         'hour': overlay.hour,
         'modality': overlay.modality,
+        'league': overlay.league,
         'background': settings.BASE_URL + background.image.url if background else '',
         'active': overlay.active,
         'team': [{
