@@ -130,18 +130,10 @@ def get_active_overlay(request, user):
 @validate_user
 @require_POST
 def update_overlay_active(request, id, user):
-    overlay_active = Overlay.objects.filter(active=True).all()
-    if overlay_active.__len__() > 0:
-        for overlay in overlay_active:
-            overlay.active = False
-            overlay.save()
-
     overlay = Overlay.objects.filter(id=id).first()
-
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
-    overlay.save()
 
     background = Background.objects.filter(modality__icontains=overlay.modality).first()
 
@@ -207,6 +199,13 @@ def update_overlay_active(request, id, user):
     }
 
     pusher.send_active_overlay(data)
+    overlay.save()
+
+    overlay_active = Overlay.objects.filter(active=True).exclude(id=id).all()
+    if overlay_active.__len__() > 0:
+        for overlay in overlay_active:
+            overlay.active = False
+            overlay.save()
 
     return JsonResponse({'status': 'Overlay atualizado com sucesso!'})
 
