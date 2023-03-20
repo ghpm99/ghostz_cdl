@@ -53,7 +53,7 @@ class BDOClass(models.Model):
 
 class ImageBDOClass(models.Model):
     bdo_class = models.ForeignKey(BDOClass, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='classimage/')
+    image = models.FileField(upload_to='classimage/')
     awakening = models.BooleanField(default=True)
 
 

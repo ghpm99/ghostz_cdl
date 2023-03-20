@@ -251,6 +251,9 @@ def import_json(request, user):
 
                 character_index = (i * 3) + (c + 1)
 
+                if overlay_data['Fam{}'.format(character_index)] == '':
+                    continue
+
                 character = Character(
                     team=team,
                     family=overlay_data['Fam{}'.format(character_index)],
