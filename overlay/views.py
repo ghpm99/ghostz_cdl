@@ -230,7 +230,7 @@ def import_json(request, user):
             date=overlay_data['Data'],
             hour=overlay_data['Horario'],
             modality=overlay_data['Modalidade'],
-            league=overlay_data['LIGA'] if overlay_data['LIGA'] else 'LIVERTO'
+            league=overlay_data['LIGA'] if overlay_data.get('LIGA') else 'LIVERTO'
         )
         overlay.save()
 
