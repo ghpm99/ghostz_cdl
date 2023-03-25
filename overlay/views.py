@@ -1,11 +1,15 @@
 import json
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET, require_POST
-from ghostz_cdl.decorators import add_cors_react_dev, validate_user, validate_pusher_user
-from overlay.models import Overlay, Team, Character, User, BDOClass, Background
+
 from django.conf import settings
+from django.db import connection
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+
+from ghostz_cdl.decorators import (add_cors_react_dev, validate_pusher_user,
+                                   validate_user)
 from lib import pusher
+from overlay.models import Background, BDOClass, Character, Overlay, Team, User
 
 
 # Create your views here.
@@ -125,6 +129,76 @@ def get_active_overlay(request, user):
     return JsonResponse({'data': data})
 
 
+def mount_overlay_active():
+    query_active_overlay = """
+        select
+            oo.modality as modality ,
+            oo.league as league ,
+            ot."name" as team_name,
+            ot.mmr as team_mmr,
+            ot.mmr_as as team_mmr_as,
+            oc."family" as user_family,
+            oc."name"  as user_name,
+            oc.bdo_class as user_class,
+            oc.combat_style as user_combat_style,
+            oc.matches as user_matches,
+            oc.defeats as user_defeats,
+            oc.victories as user_victories,
+            oc.champion as user_champion,
+            oc.dr as user_dr,
+            oc."by" as user_by,
+            oc.walkover as user_walkover,
+            coalesce (ou2.video,
+            ou.video,
+            ob.video_awakening) as video_awakening,
+            coalesce (ou2.video,
+            ou.video,
+            ob.video_sucession) as video_sucession
+        from
+            overlay_overlay oo
+        inner join overlay_team ot
+        on
+            ot.overlay_id = oo.id
+        inner join overlay_character oc
+        on
+            oc.team_id = ot.id
+        inner join overlay_bdoclass ob
+        on
+            ob.json_name = oc.bdo_class
+        left join overlay_user ou
+        on
+            ou."family" = oc."family"
+            and ou.video <> ''
+        left join overlay_uservideo ou2
+        on
+            ou2.user_id = ou.id
+            and ou2.bdo_class_id = ob.id
+        where
+            1 = 1
+            and active = true
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(query_active_overlay)
+        overlay = cursor.fetchall()
+
+    characteres = [{
+        'family': data['user_family'],
+        'name': data['user_name'],
+        'bdo_class': data['user_class'],
+        'combat_style': data['user_combat_style'],
+        'matches': data['user_matches'],
+        'defeats': data['user_defeats'],
+        'victories': data['user_victories']
+    } for data in overlay]
+
+    data = {
+        'modality': overlay[1],
+        'league': overlay[2],
+        'team': characteres
+    }
+    return data
+
+
 @csrf_exempt
 @add_cors_react_dev
 @validate_user
@@ -134,6 +208,8 @@ def update_overlay_active(request, id, user):
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
+
+    print(mount_overlay_active())
 
     background = Background.objects.filter(modality__icontains=overlay.modality).first()
 

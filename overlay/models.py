@@ -61,7 +61,16 @@ class User(models.Model):
     family = models.TextField(unique=True)
     video = models.FileField(upload_to='customvideo/', null=True)
 
+    def __str__(self):
+        return f'{self.id} {self.family}'
+
 
 class Background(models.Model):
     modality = models.TextField()
     image = models.ImageField(upload_to='background/')
+
+
+class UserVideo(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_video')
+    bdo_class = models.ForeignKey(BDOClass, on_delete=models.CASCADE, related_name='user_video', default=1)
+    video = models.FileField(upload_to='customvideo/', null=True)

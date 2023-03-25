@@ -1,5 +1,5 @@
 from django.contrib import admin
-from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background
+from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background, UserVideo
 from authentication.models import AccessToken
 
 
@@ -45,6 +45,11 @@ class AccessTokenConfig(admin.ModelAdmin):
     pass
 
 
+class UserVideoConfig(admin.ModelAdmin):
+    list_display = ('id', 'user', 'bdo_class')
+    pass
+
+
 admin.site.register(Overlay, OverlayConfig)
 admin.site.register(Team, TeamConfig)
 admin.site.register(Character, CharacterConfig)
@@ -53,3 +58,4 @@ admin.site.register(ImageBDOClass, ImageBDOClassConfig)
 admin.site.register(User, UserConfig)
 admin.site.register(Background, BackgroundConfig)
 admin.site.register(AccessToken, AccessTokenConfig)
+admin.site.register(UserVideo, UserVideoConfig)
