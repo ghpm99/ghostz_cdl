@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import (add_cors_react_dev, validate_pusher_user,
                                    validate_user)
 from lib import pusher
-from overlay.models import Background, BDOClass, Character, Overlay, Team, User
+from overlay.models import Background, BDOClass, Character, Overlay, Team, User, UserVideo
 
 
 # Create your views here.
@@ -83,14 +83,20 @@ def get_active_overlay(request, user):
         }
         return data
 
-    def userCustomVideo(family):
+    def userCustomVideo(family, bdo_class):
         user = User.objects.filter(family=family).first()
         if user is None or not user.video:
             return {
                 'video': ''
             }
+        bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
+        user_video = UserVideo.objects.filter(user=user, bdo_class=bdo_class_object).first()
+        if user_video is None or not user_video.video:
+            return {
+                'video': settings.BASE_URL + user.video.url
+            }
         return {
-            'video': settings.BASE_URL + user.video.url
+            'video': settings.BASE_URL + user_video.video.url
         }
 
     data = {
@@ -121,7 +127,7 @@ def get_active_overlay(request, user):
                 'by': character.by,
                 'walkover': character.walkover,
                 'media': BDOClassImages(character.bdo_class),
-                'custom': userCustomVideo(character.family)
+                'custom': userCustomVideo(character.family, character.bdo_class)
             } for character in team.character_set.all()]
         } for team in overlay_object.team_set.all()]
     }
@@ -134,6 +140,7 @@ def mount_overlay_active():
         select
             oo.modality as modality ,
             oo.league as league ,
+            ot.id as team_id,
             ot."name" as team_name,
             ot.mmr as team_mmr,
             ot.mmr_as as team_mmr_as,
@@ -176,27 +183,44 @@ def mount_overlay_active():
         where
             1 = 1
             and active = true
+        order by
+            ot.id
     """
+
     with connection.cursor() as cursor:
         cursor.execute(query_active_overlay)
         overlay = cursor.fetchall()
 
     characteres = [{
-        'family': data['user_family'],
-        'name': data['user_name'],
-        'bdo_class': data['user_class'],
-        'combat_style': data['user_combat_style'],
-        'matches': data['user_matches'],
-        'defeats': data['user_defeats'],
-        'victories': data['user_victories']
+        'family': data[6],
+        'name': data[7],
+        'bdo_class': data[8],
+        'combat_style': data[9],
+        'matches': data[10],
+        'defeats': data[11],
+        'victories': data[12],
+        'champion': data[13],
+        'dr': data[14],
+        'by': data[15],
+        'walkover': data[16],
+        'video_awakening': data[17],
+        'video_sucession': data[18]
     } for data in overlay]
 
-    data = {
-        'modality': overlay[1],
-        'league': overlay[2],
-        'team': characteres
+    teams = [{
+        'id': data[2],
+        'name': data[3],
+        'mmr': data[4],
+        'mmr_as': data[5]
+    } for data in overlay]
+
+    overlay_data = {
+        'modality': overlay[1][0],
+        'league': overlay[1][1],
+        'team': teams,
+        'characteres': characteres
     }
-    return data
+    return overlay_data
 
 
 @csrf_exempt
@@ -208,9 +232,7 @@ def update_overlay_active(request, id, user):
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
-
     print(mount_overlay_active())
-
     background = Background.objects.filter(modality__icontains=overlay.modality).first()
 
     def BDOClassImages(bdo_class):
@@ -231,7 +253,7 @@ def update_overlay_active(request, id, user):
         }
         return data
 
-    def userCustomVideo(family):
+    def userCustomVideo(family, bdo_class):
         user = User.objects.filter(family=family).first()
         if user is None or not user.video:
             return {
@@ -269,7 +291,7 @@ def update_overlay_active(request, id, user):
                 'by': character.by,
                 'walkover': character.walkover,
                 'media': BDOClassImages(character.bdo_class),
-                'custom': userCustomVideo(character.family)
+                'custom': userCustomVideo(character.family, character.bdo_class)
             } for character in team.character_set.all()]
         } for team in overlay.team_set.all()]
     }
