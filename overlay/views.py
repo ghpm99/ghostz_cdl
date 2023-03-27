@@ -135,26 +135,67 @@ def get_active_overlay(request, user):
     return JsonResponse({'data': data})
 
 
-def mount_overlay_active():
+def mount_overlay_active(id):
     query_active_overlay = """
         select
+            oo.id as id,
             oo.modality as modality ,
             oo.league as league ,
-            ot.id as team_id,
+            ob2.image as background_image
+        from
+            overlay_overlay oo
+        left join overlay_background ob2
+            on
+            ob2.modality = oo.modality
+        where
+            1 = 1
+            and oo.id = %(id)s
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query_active_overlay, {
+            'id': id
+        })
+        overlay = cursor.fetchone()
+
+    filters_teams = {
+        'overlay_id': overlay[0]
+    }
+
+    query_overlay_teams = """
+        select
+            ot.id as id,
             ot."name" as team_name,
+            ot.twitch as team_twitch,
             ot.mmr as team_mmr,
-            ot.mmr_as as team_mmr_as,
-            oc."family" as user_family,
-            oc."name"  as user_name,
-            oc.bdo_class as user_class,
-            oc.combat_style as user_combat_style,
-            oc.matches as user_matches,
-            oc.defeats as user_defeats,
-            oc.victories as user_victories,
-            oc.champion as user_champion,
-            oc.dr as user_dr,
-            oc."by" as user_by,
-            oc.walkover as user_walkover,
+            ot.mmr_as as team_mmr_as
+        from
+            overlay_team ot
+        where
+            1 = 1
+            and ot.overlay_id = %(overlay_id)s
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query_overlay_teams, filters_teams)
+        teams = cursor.fetchall()
+
+    team_list = []
+
+    query_overlay_players = """
+        select
+            oc.id as id,
+            oc."family" as player_family,
+            oc."name" as player_name,
+            oc.bdo_class as player_class,
+            oc.combat_style as player_style,
+            oc.matches as player_matches,
+            oc.defeats as player_defeats,
+            oc.victories as player_victories,
+            oc.champion as player_champion,
+            oc.dr as player_dr,
+            oc.by as player_by,
+            oc.walkover as player_walkover,
             coalesce (ou2.video,
             ou.video,
             ob.video_awakening) as video_awakening,
@@ -162,13 +203,7 @@ def mount_overlay_active():
             ou.video,
             ob.video_sucession) as video_sucession
         from
-            overlay_overlay oo
-        inner join overlay_team ot
-        on
-            ot.overlay_id = oo.id
-        inner join overlay_character oc
-        on
-            oc.team_id = ot.id
+            overlay_character oc
         inner join overlay_bdoclass ob
         on
             ob.json_name = oc.bdo_class
@@ -177,49 +212,59 @@ def mount_overlay_active():
             ou."family" = oc."family"
             and ou.video <> ''
         left join overlay_uservideo ou2
-        on
+                on
             ou2.user_id = ou.id
             and ou2.bdo_class_id = ob.id
         where
             1 = 1
-            and active = true
-        order by
-            ot.id
+            and oc.team_id = %(team_id)s
     """
+    for team in teams:
 
-    with connection.cursor() as cursor:
-        cursor.execute(query_active_overlay)
-        overlay = cursor.fetchall()
+        filters_player = {
+            'team_id': team[0]
+        }
 
-    characteres = [{
-        'family': data[6],
-        'name': data[7],
-        'bdo_class': data[8],
-        'combat_style': data[9],
-        'matches': data[10],
-        'defeats': data[11],
-        'victories': data[12],
-        'champion': data[13],
-        'dr': data[14],
-        'by': data[15],
-        'walkover': data[16],
-        'video_awakening': data[17],
-        'video_sucession': data[18]
-    } for data in overlay]
+        with connection.cursor() as cursor:
+            cursor.execute(query_overlay_players, filters_player)
+            players = cursor.fetchall()
 
-    teams = [{
-        'id': data[2],
-        'name': data[3],
-        'mmr': data[4],
-        'mmr_as': data[5]
-    } for data in overlay]
+        players_list = []
+
+        for player in players:
+            players_list.append({
+                'id': player[0],
+                'family': player[1],
+                'name': player[2],
+                'bdo_class': player[3],
+                'combat_style': player[4],
+                'matches': player[5],
+                'defeats': player[6],
+                'victories': player[7],
+                'champion': player[8],
+                'dr': player[9],
+                'by': player[10],
+                'walkover': player[11],
+                'video_awakening': player[12],
+                'video_sucession': player[13]
+            })
+
+        team_list.append({
+            'id': team[0],
+            'name': team[1],
+            'twitch': team[2],
+            'mmr': team[3],
+            'mmr_as': team[4],
+            'players': players_list
+        })
 
     overlay_data = {
-        'modality': overlay[1][0],
-        'league': overlay[1][1],
-        'team': teams,
-        'characteres': characteres
+        'id': overlay[0],
+        'modality': overlay[1],
+        'league': overlay[2],
+        'teams': team_list
     }
+
     return overlay_data
 
 
@@ -232,7 +277,7 @@ def update_overlay_active(request, id, user):
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
-    print(mount_overlay_active())
+    print(mount_overlay_active(id))
     background = Background.objects.filter(modality__icontains=overlay.modality).first()
 
     def BDOClassImages(bdo_class):
