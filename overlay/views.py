@@ -136,6 +136,7 @@ def get_active_overlay(request, user):
 
 
 def mount_overlay_active(id):
+
     query_active_overlay = """
         select
             oo.id as id,
@@ -232,7 +233,7 @@ def mount_overlay_active(id):
         players_list = []
 
         for player in players:
-            players_list.append({
+            player_data = {
                 'id': player[0],
                 'family': player[1],
                 'name': player[2],
@@ -245,9 +246,44 @@ def mount_overlay_active(id):
                 'dr': player[9],
                 'by': player[10],
                 'walkover': player[11],
-                'video_awakening': player[12],
-                'video_sucession': player[13]
-            })
+                'media': {
+                    'images': [],
+                    'video_awakening': settings.BASE_URL + settings.MEDIA_URL + player[12],
+                    'video_sucession': settings.BASE_URL + settings.MEDIA_URL + player[13]
+                }
+            }
+
+            modality = overlay[1]
+            if modality == 'DUPLAS' or modality == 'TRIOS':
+                class_videos_list = []
+                filters_class_videos = {
+                    'player_class': player[3],
+                    'awakening': True if player[4] == 'Despertar' else False
+                }
+
+                query_class_videos = """
+                    select
+                        image
+                    from
+                        overlay_imagebdoclass oi
+                    inner join overlay_bdoclass ob
+                    on
+                        ob.json_name = %(player_class)s
+                    where
+                        1 = 1
+                        and oi.bdo_class_id = ob.id
+                        and oi.awakening = %(awakening)s
+                """
+                with connection.cursor() as cursor:
+                    cursor.execute(query_class_videos, filters_class_videos)
+                    class_videos = cursor.fetchall()
+                for class_video in class_videos:
+                    class_videos_list.append({
+                        'url': settings.BASE_URL + settings.MEDIA_URL + class_video[0]
+                    })
+                player_data['media']['images'] = class_videos_list
+
+            players_list.append(player_data)
 
         team_list.append({
             'id': team[0],
@@ -255,14 +291,15 @@ def mount_overlay_active(id):
             'twitch': team[2],
             'mmr': team[3],
             'mmr_as': team[4],
-            'players': players_list
+            'characteres': players_list
         })
 
     overlay_data = {
         'id': overlay[0],
         'modality': overlay[1],
         'league': overlay[2],
-        'teams': team_list
+        'background': settings.BASE_URL + settings.MEDIA_URL + overlay[3] if overlay[3] else '',
+        'team': team_list
     }
 
     return overlay_data
@@ -273,75 +310,14 @@ def mount_overlay_active(id):
 @validate_user
 @require_POST
 def update_overlay_active(request, id, user):
+
+    pusher.send_active_overlay(mount_overlay_active(id))
+
     overlay = Overlay.objects.filter(id=id).first()
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
-    print(mount_overlay_active(id))
-    background = Background.objects.filter(modality__icontains=overlay.modality).first()
 
-    def BDOClassImages(bdo_class):
-        bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
-        if bdo_class_object is None:
-            return {
-                'video_awakening': '',
-                'video_sucession': '',
-                'images': []
-            }
-        data = {
-            'video_awakening': settings.BASE_URL + bdo_class_object.video_awakening.url,
-            'video_sucession': settings.BASE_URL + bdo_class_object.video_sucession.url,
-            'images': [{
-                'url': settings.BASE_URL + bdo_image.image.url,
-                'awakening': bdo_image.awakening
-            } for bdo_image in bdo_class_object.images.all()]
-        }
-        return data
-
-    def userCustomVideo(family, bdo_class):
-        user = User.objects.filter(family=family).first()
-        if user is None or not user.video:
-            return {
-                'video': ''
-            }
-        return {
-            'video': settings.BASE_URL + user.video.url
-        }
-
-    data = {
-        'id': overlay.id,
-        'date': overlay.date,
-        'hour': overlay.hour,
-        'modality': overlay.modality,
-        'league': overlay.league,
-        'background': settings.BASE_URL + background.image.url if background else '',
-        'active': overlay.active,
-        'team': [{
-            'id': team.id,
-            'name': team.name,
-            'twitch': team.twitch,
-            'mmr': team.mmr,
-            'mmr_as': team.mmr_as,
-            'characteres': [{
-                'id': character.id,
-                'family': character.family,
-                'name': character.name,
-                'bdo_class': character.bdo_class,
-                'combat_style': character.combat_style,
-                'matches': character.matches,
-                'defeats': character.defeats,
-                'victories': character.victories,
-                'champion': character.champion,
-                'dr': character.dr,
-                'by': character.by,
-                'walkover': character.walkover,
-                'media': BDOClassImages(character.bdo_class),
-                'custom': userCustomVideo(character.family, character.bdo_class)
-            } for character in team.character_set.all()]
-        } for team in overlay.team_set.all()]
-    }
-
-    pusher.send_active_overlay(data)
     overlay.save()
 
     overlay_active = Overlay.objects.filter(active=True).exclude(id=id).all()
