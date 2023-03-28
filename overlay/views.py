@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import (add_cors_react_dev, validate_pusher_user,
                                    validate_user)
 from lib import pusher
-from overlay.models import Background, BDOClass, Character, Overlay, Team, User, UserVideo
+from overlay.models import Background, BDOClass, Character, Overlay, Team, User
 
 
 # Create your views here.
@@ -63,76 +63,7 @@ def get_active_overlay(request, user):
     if overlay_object is None:
         return JsonResponse({'msg': 'Overlay not found.'}, status=404)
 
-    background = Background.objects.filter(modality__icontains=overlay_object.modality).first()
-
-    def BDOClassImages(bdo_class):
-        bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
-        if bdo_class_object is None:
-            return {
-                'video_awakening': '',
-                'video_sucession': '',
-                'images': []
-            }
-        data = {
-            'video_awakening': settings.BASE_URL + bdo_class_object.video_awakening.url,
-            'video_sucession': settings.BASE_URL + bdo_class_object.video_sucession.url,
-            'images': [{
-                'url': settings.BASE_URL + bdo_image.image.url,
-                'awakening': bdo_image.awakening
-            } for bdo_image in bdo_class_object.images.all()]
-        }
-        return data
-
-    def userCustomVideo(family, bdo_class):
-        user = User.objects.filter(family=family).first()
-        if user is None or not user.video:
-            return {
-                'video': ''
-            }
-        bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
-        user_video = UserVideo.objects.filter(user=user, bdo_class=bdo_class_object).first()
-        if user_video is None or not user_video.video:
-            return {
-                'video': settings.BASE_URL + user.video.url
-            }
-        return {
-            'video': settings.BASE_URL + user_video.video.url
-        }
-
-    data = {
-        'id': overlay_object.id,
-        'date': overlay_object.date,
-        'hour': overlay_object.hour,
-        'modality': overlay_object.modality,
-        'league': overlay_object.league,
-        'background': settings.BASE_URL + background.image.url if background else '',
-        'active': overlay_object.active,
-        'team': [{
-            'id': team.id,
-            'name': team.name,
-            'twitch': team.twitch,
-            'mmr': team.mmr,
-            'mmr_as': team.mmr_as,
-            'characteres': [{
-                'id': character.id,
-                'family': character.family,
-                'name': character.name,
-                'bdo_class': character.bdo_class,
-                'combat_style': character.combat_style,
-                'matches': character.matches,
-                'defeats': character.defeats,
-                'victories': character.victories,
-                'champion': character.champion,
-                'dr': character.dr,
-                'by': character.by,
-                'walkover': character.walkover,
-                'media': BDOClassImages(character.bdo_class),
-                'custom': userCustomVideo(character.family, character.bdo_class)
-            } for character in team.character_set.all()]
-        } for team in overlay_object.team_set.all()]
-    }
-
-    return JsonResponse({'data': data})
+    return JsonResponse({'data': mount_overlay_active(overlay_object.id)})
 
 
 def mount_overlay_active(id):
@@ -213,7 +144,7 @@ def mount_overlay_active(id):
             ou."family" = oc."family"
             and ou.video <> ''
         left join overlay_uservideo ou2
-                on
+        on
             ou2.user_id = ou.id
             and ou2.bdo_class_id = ob.id
         where
