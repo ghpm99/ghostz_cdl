@@ -62,7 +62,7 @@ class User(models.Model):
     video = models.FileField(upload_to='customvideo/', null=True)
 
     def __str__(self):
-        return f'{self.id} {self.family}'
+        return f'{self.family} {self.id}'
 
 
 class Background(models.Model):
