@@ -21,16 +21,20 @@ class CharacterConfig(admin.ModelAdmin):
 
 @admin.display(description='name')
 class BDOClassConfig(admin.ModelAdmin):
+    ordering = ['name']
     list_display = ('id', 'name', 'json_name')
     pass
 
 
 class ImageBDOClassConfig(admin.ModelAdmin):
-    list_display = ('id', 'bdo_class')
+    ordering = ['bdo_class', 'awakening']
+    list_display = ('id', 'bdo_class', 'awakening')
+
     pass
 
 
 class UserConfig(admin.ModelAdmin):
+    ordering = ['family']
     list_display = ('id', 'family')
     pass
 
@@ -46,6 +50,7 @@ class AccessTokenConfig(admin.ModelAdmin):
 
 
 class UserVideoConfig(admin.ModelAdmin):
+    ordering = ['user']
     list_display = ('id', 'user', 'bdo_class')
     pass
 
