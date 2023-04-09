@@ -45,8 +45,8 @@ def get_overlay(request, user):
                 'dr': character.dr,
                 'by': character.by,
                 'walkover': character.walkover
-            } for character in team.character_set.all()]
-        } for team in overlay.team_set.all()]
+            } for character in team.character_set.all().order_by('id')]
+        } for team in overlay.team_set.all().order_by('id')]
     } for overlay in overlay_objects]
 
     return JsonResponse({'data': data})
@@ -106,6 +106,7 @@ def mount_overlay_active(id):
         where
             1 = 1
             and ot.overlay_id = %(overlay_id)s
+        ORDER BY ot.id ASC
     """
 
     with connection.cursor() as cursor:
@@ -150,6 +151,7 @@ def mount_overlay_active(id):
         where
             1 = 1
             and oc.team_id = %(team_id)s
+        ORDER BY oc.id ASC
     """
     for team in teams:
 
@@ -401,8 +403,8 @@ def reload_overlay(request, user):
                 'walkover': character.walkover,
                 'media': BDOClassImages(character.bdo_class),
                 'custom': userCustomVideo(character.family)
-            } for character in team.character_set.all()]
-        } for team in overlay.team_set.all()]
+            } for character in team.character_set.all().order_by('id')]
+        } for team in overlay.team_set.all().order_by('id')]
     }
 
     pusher.send_active_overlay(data)
@@ -422,3 +424,36 @@ def get_class_view(request, user):
     } for data in bdo_class]
 
     return JsonResponse({'data': data})
+
+
+@csrf_exempt
+@add_cors_react_dev
+@validate_user
+@require_POST
+def update_team(request, user):
+    req = json.loads(request.body) if request.body else {}
+
+    if req is None:
+        return JsonResponse({'status': 'Nao existe dados para ser atualizados!'}, status=400)
+
+    if req.get('id') is None:
+        return JsonResponse({'status': 'Id do time nao informado!'}, status=400)
+
+    team = Team.objects.filter(id=req.get('id')).first()
+
+    if req.get('name'):
+        team.name = req.get('name')
+    if req.get('twitch'):
+        team.twitch = req.get('twitch')
+
+    team.save()
+
+    for character_data in req.get('characteres'):
+        character = Character.objects.filter(id=character_data.get('id')).first()
+        character.family = character_data.get('family')
+        character.name = character_data.get('name')
+        character.bdo_class = character_data.get('bdo_class')
+        character.combat_style = character_data.get('combat_style')
+        character.save()
+
+    return JsonResponse({'status': 'Time atualizado com sucesso!'})
