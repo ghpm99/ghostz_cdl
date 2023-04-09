@@ -409,14 +409,14 @@ def reload_overlay(request, user):
 
     pusher.send_active_overlay(data)
 
-    return JsonResponse({'status': 'Evento disparado com sucesso!'})
+    return JsonResponse({'status': 'Overlay atualizado com sucesso!'})
 
 
 @add_cors_react_dev
 @require_GET
 @validate_user
 def get_class_view(request, user):
-    bdo_class = BDOClass.objects.all()
+    bdo_class = BDOClass.objects.all().order_by('name')
 
     data = [{
         'id': data.id,
