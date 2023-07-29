@@ -9,4 +9,6 @@ urlpatterns = [
     path('reload/', views.reload_overlay, name='reload_overlay'),
     path('get-class/', views.get_class_view, name='get_class'),
     path('update-team/', views.update_team, name='update_team'),
+    path('get-overlay-types/', views.get_overlay_types, name='get_overlay_types'),
+    path('update-overlay-type/', views.update_overlay_type, name='update_overlay_type'),
 ]

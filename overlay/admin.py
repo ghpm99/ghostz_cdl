@@ -1,5 +1,5 @@
 from django.contrib import admin
-from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background, UserVideo
+from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background, UserVideo, OverlayType, OverlayReference
 from authentication.models import AccessToken
 
 
@@ -8,6 +8,14 @@ class OverlayConfig(admin.ModelAdmin):
     list_display = ('id', 'date', 'hour', 'modality', 'active')
     pass
 
+
+class OverlayTypeConfig(admin.ModelAdmin):
+    list_display = ('id', 'name', 'description', 'default')
+    pass
+
+class OverlayReferenceConfig(admin.ModelAdmin):
+    list_display = ('id', 'overlay', 'reference')
+    pass
 
 class TeamConfig(admin.ModelAdmin):
     list_display = ('id', 'overlay', 'name', 'twitch')
@@ -40,7 +48,7 @@ class UserConfig(admin.ModelAdmin):
 
 
 class BackgroundConfig(admin.ModelAdmin):
-    list_display = ('id', 'modality')
+    list_display = ('id', 'type')
     pass
 
 
@@ -64,3 +72,5 @@ admin.site.register(User, UserConfig)
 admin.site.register(Background, BackgroundConfig)
 admin.site.register(AccessToken, AccessTokenConfig)
 admin.site.register(UserVideo, UserVideoConfig)
+admin.site.register(OverlayType, OverlayTypeConfig)
+admin.site.register(OverlayReference, OverlayReferenceConfig)

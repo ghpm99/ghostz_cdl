@@ -48,3 +48,7 @@ def auth(request, channel_name, socket_id):
 
 def send_active_overlay(overlay):
     pusher_client.trigger('private-overlay', 'overlay', {'data': overlay})
+
+
+def send_overlay_type(type):
+    pusher_client.trigger('private-overlay', 'overlay_type', {'data': type})

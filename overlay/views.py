@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ghostz_cdl.decorators import (add_cors_react_dev, validate_pusher_user,
                                    validate_user)
 from lib import pusher
-from overlay.models import Background, BDOClass, Character, Overlay, Team, User
+from overlay.models import Background, BDOClass, Character, Overlay, Team, User, OverlayType, OverlayReference
 
 
 # Create your views here.
@@ -71,14 +71,18 @@ def mount_overlay_active(id):
     query_active_overlay = """
         select
             oo.id as id,
-            oo.modality as modality ,
-            oo.league as league ,
-            ob2.image as background_image
+            oo.modality as modality,
+            oo.league as league,
+            ob2.image as background_image,
+            ot.name as overlay_type
         from
             overlay_overlay oo
         left join overlay_background ob2
             on
-            ob2.modality = oo.modality
+            ob2.type_id = oo.type_id
+        left join overlay_overlaytype ot
+            on
+            ot.id = oo.type_id
         where
             1 = 1
             and oo.id = %(id)s
@@ -186,35 +190,33 @@ def mount_overlay_active(id):
                 }
             }
 
-            modality = overlay[1]
-            if modality == 'DUPLAS' or modality == 'TRIOS':
-                class_videos_list = []
-                filters_class_videos = {
-                    'player_class': player[3],
-                    'awakening': True if player[4] == 'Despertar' else False
-                }
+            class_videos_list = []
+            filters_class_videos = {
+                'player_class': player[3],
+                'awakening': True if player[4] == 'Despertar' else False
+            }
 
-                query_class_videos = """
-                    select
-                        image
-                    from
-                        overlay_imagebdoclass oi
-                    inner join overlay_bdoclass ob
-                    on
-                        ob.json_name = %(player_class)s
-                    where
-                        1 = 1
-                        and oi.bdo_class_id = ob.id
-                        and oi.awakening = %(awakening)s
-                """
-                with connection.cursor() as cursor:
-                    cursor.execute(query_class_videos, filters_class_videos)
-                    class_videos = cursor.fetchall()
-                for class_video in class_videos:
-                    class_videos_list.append({
-                        'url': settings.BASE_URL + settings.MEDIA_URL + class_video[0]
-                    })
-                player_data['media']['images'] = class_videos_list
+            query_class_videos = """
+                select
+                    image
+                from
+                    overlay_imagebdoclass oi
+                inner join overlay_bdoclass ob
+                on
+                    ob.json_name = %(player_class)s
+                where
+                    1 = 1
+                    and oi.bdo_class_id = ob.id
+                    and oi.awakening = %(awakening)s
+            """
+            with connection.cursor() as cursor:
+                cursor.execute(query_class_videos, filters_class_videos)
+                class_videos = cursor.fetchall()
+            for class_video in class_videos:
+                class_videos_list.append({
+                    'url': settings.BASE_URL + settings.MEDIA_URL + class_video[0]
+                })
+            player_data['media']['images'] = class_videos_list
 
             players_list.append(player_data)
 
@@ -224,14 +226,22 @@ def mount_overlay_active(id):
             'twitch': team[2],
             'mmr': team[3],
             'mmr_as': team[4],
+            'victory': 0,
             'characteres': players_list
         })
+
+    if overlay[4] is None:
+        overlay_default = OverlayType.objects.filter(default=True).first()
+        overlay_name = overlay_default.name
+    else:
+        overlay_name = overlay[4]
 
     overlay_data = {
         'id': overlay[0],
         'modality': overlay[1],
         'league': overlay[2],
         'background': settings.BASE_URL + settings.MEDIA_URL + overlay[3] if overlay[3] else '',
+        'type': overlay_name,
         'team': team_list
     }
 
@@ -278,11 +288,20 @@ def import_json(request, user):
     data = json.loads(req.get('data')) if req.get('data') else []
 
     for overlay_data in data:
+
+        overlay_reference = OverlayReference.objects.filter(reference=overlay_data['Modalidade']).first()
+
+        if overlay_reference is None:
+            overlay_type = OverlayType.objects.filter(default=True).first()
+        else:
+            overlay_type = overlay_reference.overlay
+
         overlay = Overlay(
             date=overlay_data['Data'],
             hour=overlay_data['Horario'],
             modality=overlay_data['Modalidade'],
-            league=overlay_data['LIGA'] if overlay_data.get('LIGA') else 'LIVERTO'
+            league=overlay_data['LIGA'] if overlay_data.get('LIGA') else 'LIVERTO',
+            type=overlay_type
         )
         overlay.save()
 
@@ -457,3 +476,29 @@ def update_team(request, user):
         character.save()
 
     return JsonResponse({'status': 'Time atualizado com sucesso!'})
+
+
+@add_cors_react_dev
+@require_GET
+@validate_user
+def get_overlay_types(request, user):
+    overlay_types = OverlayType.objects.all().order_by('name')
+
+    data = [{
+        'id': overlay_type.id,
+        'name': overlay_type.name
+    } for overlay_type in overlay_types]
+
+    return JsonResponse({'data': data})
+
+
+@csrf_exempt
+@add_cors_react_dev
+@validate_user
+@require_POST
+def update_overlay_type(request, user):
+    req = json.loads(request.body)
+    overlay_type = OverlayType.objects.filter(id=req).first()
+    pusher.send_overlay_type(overlay_type.name)
+
+    return JsonResponse({'status': 'Overlay atualizado com sucesso!'})

@@ -3,6 +3,15 @@ from django.contrib.auth.models import User
 
 
 # Create your models here.
+class OverlayType(models.Model):
+    name = models.TextField()
+    description = models.TextField()
+    default = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.name}'
+
+
 class Overlay(models.Model):
     date = models.TextField()
     hour = models.TextField()
@@ -10,6 +19,7 @@ class Overlay(models.Model):
     active = models.BooleanField(default=False)
     league = models.TextField(default='')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True)
+    type = models.ForeignKey(OverlayType, on_delete=models.PROTECT, null=True)
 
     def __str__(self) -> str:
         return f'Id: {self.id} Data: {self.date} Hora: {self.hour}'
@@ -66,7 +76,7 @@ class User(models.Model):
 
 
 class Background(models.Model):
-    modality = models.TextField()
+    type = models.ForeignKey(OverlayType, on_delete=models.PROTECT, null=True)
     image = models.ImageField(upload_to='background/')
 
 
@@ -74,3 +84,8 @@ class UserVideo(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_video')
     bdo_class = models.ForeignKey(BDOClass, on_delete=models.CASCADE, related_name='user_video', default=1)
     video = models.FileField(upload_to='customvideo/', null=True)
+
+
+class OverlayReference(models.Model):
+    overlay = models.ForeignKey(OverlayType, on_delete=models.CASCADE)
+    reference = models.TextField()

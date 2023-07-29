@@ -28,9 +28,9 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
-BASE_URL = 'http://localhost:8000'
+BASE_URL = 'http://localhost:8200'
 
-BASE_URL_WEBHOOK = 'http://localhost:8100'
+BASE_URL_WEBHOOK = 'http://localhost:8200'
 
 BASE_URL_FRONTEND = 'http://localhost:3000'
 
