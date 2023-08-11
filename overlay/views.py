@@ -363,7 +363,7 @@ def reload_overlay(request, user):
     if overlay is None:
         return JsonResponse({'status': 'Não existe overlay ativo!'}, status=400)
 
-    background = Background.objects.filter(modality__icontains=overlay.modality).first()
+    background = Background.objects.filter(type=overlay.type).first()
 
     def BDOClassImages(bdo_class):
         bdo_class_object = BDOClass.objects.filter(json_name=bdo_class).first()
