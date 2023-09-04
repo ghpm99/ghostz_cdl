@@ -23,6 +23,7 @@ urlpatterns = [
     path('auth/', include('authentication.urls')),
     path('pusher/', include('pusher_webhook.urls')),
     path('overlay/', include('overlay.urls')),
+    path('youtube/', include('youtube_overlay.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
