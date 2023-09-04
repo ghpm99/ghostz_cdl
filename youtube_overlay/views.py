@@ -1,7 +1,6 @@
-import google.oauth2.credentials
 import google_auth_oauthlib.flow
-from django.shortcuts import redirect
 from django.views.decorators.http import require_GET
+from django.http import JsonResponse
 
 from ghostz_cdl.decorators import add_cors_react_dev, validate_user
 
@@ -20,6 +19,6 @@ def get_oauth_token(request, user):
         # Enable offline access so that you can refresh an access token without
         # re-prompting the user for permission. Recommended for web server apps.
         access_type='offline',
-        # Enable incremental authorization. Recommended as a best practice.
+        # Enable incremental authorization. Recommendcoed as a best practice.
         include_granted_scopes='true')
-    return redirect(authorization_url)
+    return JsonResponse({'url': authorization_url})

@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from ghostz_cdl.settings.base import *
+from ghostz_cdl.settings.base import *  # noqa: F403, F401
 
 load_dotenv()
 
@@ -28,11 +28,11 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
-BASE_URL = 'http://localhost:8200'
+BASE_URL = 'http://localhost:8300'
 
-BASE_URL_WEBHOOK = 'http://localhost:8200'
+BASE_URL_WEBHOOK = 'http://localhost:8300'
 
-BASE_URL_FRONTEND = 'http://localhost:3000'
+BASE_URL_FRONTEND = 'http://localhost:3300'
 
 try:
     from ghostz_cdl.settings.local_settings import *  # noqa: F403, F401

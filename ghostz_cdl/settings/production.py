@@ -1,5 +1,5 @@
 import os
-from ghostz_cdl.settings.base import *
+from ghostz_cdl.settings.base import *  # noqa: F403, F401
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
