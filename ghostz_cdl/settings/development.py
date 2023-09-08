@@ -34,6 +34,8 @@ BASE_URL_WEBHOOK = 'http://localhost:8300'
 
 BASE_URL_FRONTEND = 'http://localhost:3300'
 
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+
 try:
     from ghostz_cdl.settings.local_settings import *  # noqa: F403, F401
 except ImportError:
