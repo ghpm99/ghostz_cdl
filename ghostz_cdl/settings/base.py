@@ -28,6 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 INSTALLED_APPS = [
     'overlay',
     'authentication',
+    'youtube_overlay',
     'django.contrib.auth',
     'django.contrib.admin',
     'django.contrib.contenttypes',
