@@ -4,6 +4,7 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.db.models import Count
 
 import googleapiclient.discovery
 import googleapiclient.errors
@@ -128,16 +129,52 @@ def load_playlist(request, user):
         response_playlist = request_playlist.execute()
 
         for playlist_item in response_playlist['items']:
-            snippet_item = playlist_item['snippet']
+            playlist_item_to_youtube_video(playlist, playlist_item)
 
-            video_title = snippet_item.get('title')
-            video_description = snippet_item.get('description')
-            resource = snippet_item.get('resourceId')
-            video_id = resource.get('videoId')
+        next_page_token = response_playlist.get('nextPageToken')
 
-            YoutubeVideo.objects.update_or_create(
-                youtube_id=video_id, youtube_playlist=playlist, defaults={
-                    'title': video_title, 'description': video_description}
+        while next_page_token is not None:
+            request_playlist = youtube.playlistItems().list(
+                part="snippet,contentDetails",
+                pageToken=next_page_token,
+                playlistId=item.get('id')
             )
+            response_playlist = request_playlist.execute()
+
+            for playlist_item in response_playlist['items']:
+                playlist_item_to_youtube_video(playlist, playlist_item)
+
+            next_page_token = response_playlist.get('nextPageToken')
 
     return JsonResponse({'msg': 'Playlist carregada com sucesso'})
+
+
+def playlist_item_to_youtube_video(playlist, playlist_item):
+    snippet_item = playlist_item['snippet']
+
+    video_title = snippet_item.get('title')
+    video_description = snippet_item.get('description')
+    resource = snippet_item.get('resourceId')
+    video_id = resource.get('videoId')
+
+    YoutubeVideo.objects.update_or_create(
+        youtube_id=video_id, youtube_playlist=playlist, defaults={
+            'title': video_title, 'description': video_description}
+    )
+
+
+@add_cors_react_dev
+@require_GET
+@validate_user
+def youtube_playlist(request, user):
+    youtube_playlist = YoutubePlayList.objects.all().annotate(count_video=Count('youtubevideo'))
+
+    data = [{
+        'id': playlist.id,
+        'youtube_id': playlist.youtube_id,
+        'title': playlist.title,
+        'description': playlist.description,
+        'count': playlist.count_video
+    } for playlist in youtube_playlist]
+
+    return JsonResponse({'data': data})
