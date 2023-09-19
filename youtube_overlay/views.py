@@ -174,7 +174,16 @@ def youtube_playlist(request, user):
         'youtube_id': playlist.youtube_id,
         'title': playlist.title,
         'description': playlist.description,
+        'active': playlist.active,
         'count': playlist.count_video
     } for playlist in youtube_playlist]
 
     return JsonResponse({'data': data})
+
+
+@add_cors_react_dev
+@require_GET
+@validate_user
+def active_youtube_playlist(request, user):
+
+    return JsonResponse({'msg': 'ok'})
