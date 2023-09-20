@@ -1,7 +1,10 @@
+import json
+
 import google_auth_oauthlib.flow
 import google.oauth2.credentials
 from django.conf import settings
-from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.db.models import Count
@@ -9,7 +12,7 @@ from django.db.models import Count
 import googleapiclient.discovery
 import googleapiclient.errors
 
-from ghostz_cdl.decorators import add_cors_react_dev, validate_user
+from ghostz_cdl.decorators import add_cors_react_dev, validate_user, validate_pusher_user
 from .models import YoutubeCredentials, YoutubePlayList, YoutubeVideo
 from django.contrib.auth.models import User
 
@@ -124,7 +127,8 @@ def load_playlist(request, user):
 
         request_playlist = youtube.playlistItems().list(
             part="snippet,contentDetails",
-            playlistId=item.get('id')
+            playlistId=item.get('id'),
+            maxResults=50
         )
         response_playlist = request_playlist.execute()
 
@@ -156,17 +160,19 @@ def playlist_item_to_youtube_video(playlist, playlist_item):
     video_description = snippet_item.get('description')
     resource = snippet_item.get('resourceId')
     video_id = resource.get('videoId')
+    position = snippet_item.get('position')
 
     YoutubeVideo.objects.update_or_create(
         youtube_id=video_id, youtube_playlist=playlist, defaults={
-            'title': video_title, 'description': video_description}
+            'title': video_title, 'description': video_description, 'position': position
+        }
     )
 
 
 @add_cors_react_dev
 @require_GET
 @validate_user
-def youtube_playlist(request, user):
+def get_playlist(request, user):
     youtube_playlist = YoutubePlayList.objects.all().annotate(count_video=Count('youtubevideo'))
 
     data = [{
@@ -181,9 +187,41 @@ def youtube_playlist(request, user):
     return JsonResponse({'data': data})
 
 
+@csrf_exempt
 @add_cors_react_dev
-@require_GET
+@require_POST
 @validate_user
-def active_youtube_playlist(request, user):
+def update_active_youtube_playlist(request, user):
+    req = json.loads(request.body) if request.body else {}
+
+    playlist_id = req.get('playlist_id')
+    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id).first()
+    if youtube_playlist is None:
+        return JsonResponse({'msg': 'Playlist não encontrada'}, status=404)
+
+    youtube_playlist.active = True
+    youtube_playlist.save()
+
+    active_playlist = YoutubePlayList.objects.filter(active=True).exclude(id=playlist_id).all()
+    if active_playlist.__len__() > 0:
+        for playlist in active_playlist:
+            playlist.active = False
+            playlist.save()
 
     return JsonResponse({'msg': 'ok'})
+
+
+@add_cors_react_dev
+@require_GET
+@validate_pusher_user
+def get_active_youtube_playlist(request, user):
+
+    active_youtube_videos = YoutubeVideo.objects.filter(youtube_playlist__active=True).order_by('position')[:5]
+
+    data = [{
+        'youtube_id': video.youtube_id,
+        'title': video.title,
+        'position': video.position
+    } for video in active_youtube_videos]
+
+    return JsonResponse({'data': data})

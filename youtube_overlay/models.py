@@ -29,6 +29,7 @@ class YoutubeVideo(models.Model):
     title = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=5000, null=True, blank=True)
     youtube_playlist = models.ForeignKey(YoutubePlayList, on_delete=models.CASCADE, null=True)
+    position = models.IntegerField(default=0)
 
 
 class YoutubeCredentials(models.Model):
