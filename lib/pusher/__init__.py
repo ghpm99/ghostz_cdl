@@ -52,3 +52,7 @@ def send_active_overlay(overlay):
 
 def send_overlay_type(type):
     pusher_client.trigger('private-overlay', 'overlay_type', {'data': type})
+
+
+def send_next_video_youtube(playlist):
+    pusher_client.trigger('private-youtube', 'commands', playlist)

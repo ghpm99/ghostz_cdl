@@ -8,6 +8,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.db.models import Count
+from lib import pusher
 
 import googleapiclient.discovery
 import googleapiclient.errors
@@ -220,13 +221,13 @@ def get_active_youtube_playlist(request, user):
 
     position = req.get('position')
 
-    if position is not None:
+    if position is None:
+        active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
+    else:
         active_youtube_videos = YoutubeVideo.objects.filter(
             youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, position__gt=position
         ).order_by('position')[:2]
-    else:
-        active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE).order_by('position')[:2]
 
     if active_youtube_videos.__len__() < 2:
         YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
@@ -253,6 +254,8 @@ def set_state_youtube_video(request, user):
     video_id = req.get('id')
     state = req.get('state')
 
+    print(state)
+
     if video_id is None or state is None:
         return JsonResponse({'msg': 'ok'})
 
@@ -272,3 +275,27 @@ def set_state_youtube_video(request, user):
         youtube_video.save()
 
     return JsonResponse({'msg': 'ok'})
+
+
+@csrf_exempt
+@add_cors_react_dev
+@require_POST
+@validate_user
+def next_video_playlist(request, user):
+    active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE).order_by('position')[:2]
+
+    if active_youtube_videos.__len__() < 2:
+        YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
+            status=YoutubeVideo.STATUS_QUEUE
+        ).update(status=YoutubeVideo.STATUS_QUEUE)
+
+    data = [{
+        'id': video.id,
+        'youtube_id': video.youtube_id,
+        'title': video.title,
+        'position': video.position
+    } for video in active_youtube_videos]
+
+    pusher.send_next_video_youtube(data)
+    return JsonResponse({'msg': 'Evento disparado com sucesso'})
