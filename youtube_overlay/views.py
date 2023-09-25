@@ -216,12 +216,59 @@ def update_active_youtube_playlist(request, user):
 @validate_pusher_user
 def get_active_youtube_playlist(request, user):
 
-    active_youtube_videos = YoutubeVideo.objects.filter(youtube_playlist__active=True).order_by('position')[:5]
+    req = request.GET
+
+    position = req.get('position')
+
+    if position is not None:
+        active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, position__gt=position
+        ).order_by('position')[:2]
+    else:
+        active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE).order_by('position')[:2]
+
+    if active_youtube_videos.__len__() < 2:
+        YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
+            status=YoutubeVideo.STATUS_QUEUE
+        ).update(status=YoutubeVideo.STATUS_QUEUE)
 
     data = [{
+        'id': video.id,
         'youtube_id': video.youtube_id,
         'title': video.title,
         'position': video.position
     } for video in active_youtube_videos]
 
     return JsonResponse({'data': data})
+
+
+@csrf_exempt
+@add_cors_react_dev
+@require_POST
+@validate_pusher_user
+def set_state_youtube_video(request, user):
+    req = json.loads(request.body) if request.body else {}
+
+    video_id = req.get('id')
+    state = req.get('state')
+
+    if video_id is None or state is None:
+        return JsonResponse({'msg': 'ok'})
+
+    youtube_video = YoutubeVideo.objects.filter(id=video_id).first()
+
+    if youtube_video is None:
+        return JsonResponse({'msg': 'ok'})
+
+    if state == 0:
+        youtube_video.status = YoutubeVideo.STATUS_ENDED
+        youtube_video.save()
+    elif state == 1:
+        youtube_video.status = YoutubeVideo.STATUS_PLAYING
+        youtube_video.save()
+    elif state == 2:
+        youtube_video.status = YoutubeVideo.STATUS_PAUSED
+        youtube_video.save()
+
+    return JsonResponse({'msg': 'ok'})
