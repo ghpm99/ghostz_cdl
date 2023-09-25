@@ -254,8 +254,6 @@ def set_state_youtube_video(request, user):
     video_id = req.get('id')
     state = req.get('state')
 
-    print(state)
-
     if video_id is None or state is None:
         return JsonResponse({'msg': 'ok'})
 
