@@ -24,7 +24,7 @@ DATABASES = {
 
 BASE_URL = 'https://overlay.ghostz.com.br'
 
-BASE_URL_WEBHOOK = 'https://overlay.ghostz.com.br'
+BASE_URL_WEBHOOK = 'https://overlay.ghostz.com.br/'
 
 BASE_URL_FRONTEND = 'https://ghostz-cdl-dash.vercel.app'
 

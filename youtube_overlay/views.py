@@ -163,9 +163,16 @@ def playlist_item_to_youtube_video(playlist, playlist_item):
     video_id = resource.get('videoId')
     position = snippet_item.get('position')
 
+    status = playlist_item['status']
+    privacy = status.get('privacyStatus')
+
     YoutubeVideo.objects.update_or_create(
-        youtube_id=video_id, youtube_playlist=playlist, defaults={
-            'title': video_title, 'description': video_description, 'position': position
+        position=position, youtube_playlist=playlist, defaults={
+            'title': video_title,
+            'description': video_description,
+            'position': position,
+            'privacy': privacy,
+            'youtube_id': video_id
         }
     )
 
@@ -223,10 +230,11 @@ def get_active_youtube_playlist(request, user):
 
     if position is None:
         active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
+            youtube_playlist__active=True, privacy='public'
+        ).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
     else:
         active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, position__gt=position
+            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, position__gt=position, privacy='public'
         ).order_by('position')[:2]
 
     if active_youtube_videos.__len__() < 2:
@@ -281,7 +289,8 @@ def set_state_youtube_video(request, user):
 @validate_user
 def next_video_playlist(request, user):
     active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE).order_by('position')[:2]
+        youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
+    ).order_by('position')[:2]
 
     if active_youtube_videos.__len__() < 2:
         YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
