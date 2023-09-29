@@ -127,7 +127,7 @@ def load_playlist(request, user):
         playlist.save()
 
         request_playlist = youtube.playlistItems().list(
-            part="snippet,contentDetails",
+            part="snippet,contentDetails,status",
             playlistId=item.get('id'),
             maxResults=50
         )
@@ -140,7 +140,7 @@ def load_playlist(request, user):
 
         while next_page_token is not None:
             request_playlist = youtube.playlistItems().list(
-                part="snippet,contentDetails",
+                part="snippet,contentDetails,status",
                 pageToken=next_page_token,
                 playlistId=item.get('id')
             )
