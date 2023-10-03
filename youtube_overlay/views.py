@@ -246,7 +246,7 @@ def get_active_youtube_playlist(request, user):
         'id': video.id,
         'youtube_id': video.youtube_id,
         'title': video.title,
-        'position': video.position
+        'position': video.position or 0
     } for video in active_youtube_videos]
 
     return JsonResponse({'data': data})
@@ -301,7 +301,7 @@ def next_video_playlist(request, user):
         'id': video.id,
         'youtube_id': video.youtube_id,
         'title': video.title,
-        'position': video.position
+        'position': video.position or 0
     } for video in active_youtube_videos]
 
     pusher.send_next_video_youtube(data)
