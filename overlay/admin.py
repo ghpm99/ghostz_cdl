@@ -1,5 +1,7 @@
 from django.contrib import admin
-from overlay.models import Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background, UserVideo, OverlayType, OverlayReference
+from overlay.models import (
+    Overlay, Team, Character, BDOClass, ImageBDOClass, User, Background, UserVideo, OverlayType, OverlayReference
+)
 from authentication.models import AccessToken
 
 
@@ -13,9 +15,11 @@ class OverlayTypeConfig(admin.ModelAdmin):
     list_display = ('id', 'name', 'description', 'default')
     pass
 
+
 class OverlayReferenceConfig(admin.ModelAdmin):
     list_display = ('id', 'overlay', 'reference')
     pass
+
 
 class TeamConfig(admin.ModelAdmin):
     list_display = ('id', 'overlay', 'name', 'twitch')
