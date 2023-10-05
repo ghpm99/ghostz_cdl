@@ -224,23 +224,15 @@ def update_active_youtube_playlist(request, user):
 @validate_pusher_user
 def get_active_youtube_playlist(request, user):
 
-    req = request.GET
-
-    position = req.get('position')
-
-    if position is None:
-        active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, privacy='public'
-        ).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
-    else:
-        active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, position__gt=position, privacy='public'
-        ).order_by('position')[:2]
+    active_youtube_videos = YoutubeVideo.objects.filter(
+        youtube_playlist__active=True, privacy='public'
+    ).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
 
     if active_youtube_videos.__len__() < 2:
-        YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
-            status=YoutubeVideo.STATUS_QUEUE
-        ).update(status=YoutubeVideo.STATUS_QUEUE)
+        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
+        active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, privacy='public'
+        ).order_by('position')[:2]
 
     data = [{
         'id': video.id,
@@ -252,6 +244,40 @@ def get_active_youtube_playlist(request, user):
     return JsonResponse({'data': data})
 
 
+@add_cors_react_dev
+@require_GET
+@validate_pusher_user
+def next_video_playlist(request, user):
+
+    current_youtube_video = YoutubeVideo.objects.filter(
+        youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
+    ).order_by('position').first()
+
+    if current_youtube_video is not None:
+        active_youtube_video = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, position__gt=current_youtube_video.position, privacy='public'
+        ).order_by('position').first()
+    else:
+        active_youtube_video = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
+        ).order_by('position').first()
+
+    if active_youtube_video is None:
+        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
+        active_youtube_video = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, privacy='public'
+        ).order_by('position').first()
+
+    data = {
+        'id': active_youtube_video.id,
+        'youtube_id': active_youtube_video.youtube_id,
+        'title': active_youtube_video.title,
+        'position': active_youtube_video.position or 0
+    }
+
+    return JsonResponse({'data': data})
+
+
 @csrf_exempt
 @add_cors_react_dev
 @require_POST
@@ -259,13 +285,13 @@ def get_active_youtube_playlist(request, user):
 def set_state_youtube_video(request, user):
     req = json.loads(request.body) if request.body else {}
 
-    video_id = req.get('id')
+    id = req.get('id')
     state = req.get('state')
 
-    if video_id is None or state is None:
+    if id is None or state is None:
         return JsonResponse({'msg': 'ok'})
 
-    youtube_video = YoutubeVideo.objects.filter(id=video_id).first()
+    youtube_video = YoutubeVideo.objects.filter(id=id).first()
 
     if youtube_video is None:
         return JsonResponse({'msg': 'ok'})
@@ -287,15 +313,24 @@ def set_state_youtube_video(request, user):
 @add_cors_react_dev
 @require_POST
 @validate_user
-def next_video_playlist(request, user):
+def skip_video_playlist(request, user):
+    current_youtube_video = YoutubeVideo.objects.filter(
+        youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
+    ).all()
+
+    for current in current_youtube_video:
+        current.status = YoutubeVideo.STATUS_ENDED
+        current.save()
+
     active_youtube_videos = YoutubeVideo.objects.filter(
         youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
     ).order_by('position')[:2]
 
     if active_youtube_videos.__len__() < 2:
-        YoutubeVideo.objects.filter(youtube_playlist__active=True).exclude(
-            status=YoutubeVideo.STATUS_QUEUE
-        ).update(status=YoutubeVideo.STATUS_QUEUE)
+        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
+        active_youtube_videos = YoutubeVideo.objects.filter(
+            youtube_playlist__active=True, privacy='public'
+        ).order_by('position')[:2]
 
     data = [{
         'id': video.id,

@@ -10,6 +10,7 @@ urlpatterns = [
         path('update-active/', views.update_active_youtube_playlist, name='update_active_playlist'),
         path('get-active/', views.get_active_youtube_playlist, name='get_active_playlist'),
         path('set-state/', views.set_state_youtube_video, name='set_state_video'),
+        path('skip-video/', views.skip_video_playlist, name='skip_video_youtube'),
         path('next-video/', views.next_video_playlist, name='next_video_youtube'),
     ]))
 ]
