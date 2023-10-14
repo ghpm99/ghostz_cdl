@@ -8,6 +8,7 @@ class YoutubePlayList(models.Model):
     title = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=5000, null=True, blank=True)
     active = models.BooleanField(default=False)
+    random = models.BooleanField(default=False)
 
 
 class YoutubeVideo(models.Model):

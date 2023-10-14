@@ -189,6 +189,7 @@ def get_playlist(request, user):
         'title': playlist.title,
         'description': playlist.description,
         'active': playlist.active,
+        'random': playlist.random,
         'count': playlist.count_video
     } for playlist in youtube_playlist]
 
@@ -215,6 +216,25 @@ def update_active_youtube_playlist(request, user):
         for playlist in active_playlist:
             playlist.active = False
             playlist.save()
+
+    return JsonResponse({'msg': 'ok'})
+
+
+@csrf_exempt
+@add_cors_react_dev
+@require_POST
+@validate_user
+def update_random_youtube_playlist(request, user):
+    req = json.loads(request.body) if request.body else {}
+    playlist_id = req.get('playlist_id')
+    random = req.get('random')
+
+    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id).first()
+    if youtube_playlist is None:
+        return JsonResponse({'msg': 'Playlist não encontrada'}, status=404)
+
+    youtube_playlist.random = random
+    youtube_playlist.save()
 
     return JsonResponse({'msg': 'ok'})
 
@@ -249,24 +269,34 @@ def get_active_youtube_playlist(request, user):
 @validate_pusher_user
 def next_video_playlist(request, user):
 
+    active_youtube_playlist = YoutubePlayList.objects.filter(active=True).first()
+
+    if active_youtube_playlist is None:
+        active_youtube_playlist = YoutubePlayList.objects.first()
+        active_youtube_playlist.active = True
+        active_youtube_playlist.save()
+
     current_youtube_video = YoutubeVideo.objects.filter(
         youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
     ).order_by('position').first()
 
+    order = '?' if active_youtube_playlist.random else 'position'
+    print(order)
+
     if current_youtube_video is not None:
         active_youtube_video = YoutubeVideo.objects.filter(
             youtube_playlist__active=True, position__gt=current_youtube_video.position, privacy='public'
-        ).order_by('position').first()
+        ).order_by(order).first()
     else:
         active_youtube_video = YoutubeVideo.objects.filter(
             youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
-        ).order_by('position').first()
+        ).order_by(order).first()
 
     if active_youtube_video is None:
         YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
         active_youtube_video = YoutubeVideo.objects.filter(
             youtube_playlist__active=True, privacy='public'
-        ).order_by('position').first()
+        ).order_by(order).first()
 
     data = {
         'id': active_youtube_video.id,
@@ -314,6 +344,14 @@ def set_state_youtube_video(request, user):
 @require_POST
 @validate_user
 def skip_video_playlist(request, user):
+
+    active_youtube_playlist = YoutubePlayList.objects.filter(active=True).first()
+
+    if active_youtube_playlist is None:
+        active_youtube_playlist = YoutubePlayList.objects.first()
+        active_youtube_playlist.active = True
+        active_youtube_playlist.save()
+
     current_youtube_video = YoutubeVideo.objects.filter(
         youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
     ).all()
@@ -322,15 +360,18 @@ def skip_video_playlist(request, user):
         current.status = YoutubeVideo.STATUS_ENDED
         current.save()
 
+    order = '?' if active_youtube_playlist.random else 'position'
+    print(order)
+
     active_youtube_videos = YoutubeVideo.objects.filter(
         youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
-    ).order_by('position')[:2]
+    ).order_by(order)[:2]
 
     if active_youtube_videos.__len__() < 2:
         YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
         active_youtube_videos = YoutubeVideo.objects.filter(
             youtube_playlist__active=True, privacy='public'
-        ).order_by('position')[:2]
+        ).order_by(order)[:2]
 
     data = [{
         'id': video.id,

@@ -8,6 +8,7 @@ urlpatterns = [
     path('playlist/', include([
         path('', views.get_playlist, name='playlist'),
         path('update-active/', views.update_active_youtube_playlist, name='update_active_playlist'),
+        path('update-random/', views.update_random_youtube_playlist, name='update_random_playlist'),
         path('get-active/', views.get_active_youtube_playlist, name='get_active_playlist'),
         path('set-state/', views.set_state_youtube_video, name='set_state_video'),
         path('skip-video/', views.skip_video_playlist, name='skip_video_youtube'),
