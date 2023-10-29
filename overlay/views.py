@@ -18,7 +18,7 @@ from overlay.models import Background, BDOClass, Character, Overlay, Team, User,
 @validate_user
 def get_overlay(request, user):
 
-    overlay_objects = Overlay.objects.all().order_by('id')
+    overlay_objects = Overlay.objects.filter(user=user).all().order_by('id')
 
     data = [{
         'id': overlay.id,
