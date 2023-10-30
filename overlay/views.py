@@ -56,9 +56,9 @@ def get_overlay(request, user):
 @require_GET
 @validate_pusher_user
 def get_active_overlay(request, user):
-    overlay_object = Overlay.objects.filter(active=True).first()
+    overlay_object = Overlay.objects.filter(active=True, user=user).first()
     if overlay_object is None:
-        overlay_object = Overlay.objects.first()
+        overlay_object = Overlay.objects.filter(user=user).first()
 
     if overlay_object is None:
         return JsonResponse({'msg': 'Overlay not found.'}, status=404)
@@ -254,21 +254,20 @@ def mount_overlay_active(id):
 @require_POST
 def update_overlay_active(request, id, user):
 
-    pusher.send_active_overlay(mount_overlay_active(id))
-
-    overlay = Overlay.objects.filter(id=id).first()
+    overlay = Overlay.objects.filter(id=id, user=user).first()
     if overlay is None:
         return JsonResponse({'status': 'Overlay não encontrado'}, status=404)
     overlay.active = True
 
     overlay.save()
 
-    overlay_active = Overlay.objects.filter(active=True).exclude(id=id).all()
+    overlay_active = Overlay.objects.filter(active=True, user=user).exclude(id=id).all()
     if overlay_active.__len__() > 0:
         for overlay in overlay_active:
             overlay.active = False
             overlay.save()
 
+    pusher.send_active_overlay(id)
     return JsonResponse({'status': 'Overlay atualizado com sucesso!'})
 
 
@@ -280,7 +279,7 @@ def import_json(request, user):
     req = json.loads(request.body) if request.body else {}
 
     if req.get('reset') is True:
-        Overlay.objects.all().delete()
+        Overlay.objects.filter(user=user).all().delete()
 
     if req.get('data') is None:
         return JsonResponse({'status': 'Nao existe dada para ser importado!'}, status=400)
@@ -301,7 +300,8 @@ def import_json(request, user):
             hour=overlay_data['Horario'],
             modality=overlay_data['Modalidade'],
             league=overlay_data['LIGA'] if overlay_data.get('LIGA') else 'LIVERTO',
-            type=overlay_type
+            type=overlay_type,
+            user=user
         )
         overlay.save()
 
@@ -342,12 +342,12 @@ def import_json(request, user):
                 )
                 character.save()
 
-                user = User.objects.filter(family=character.family).first()
-                if user is None:
-                    user = User(
+                user_overlay = User.objects.filter(family=character.family).first()
+                if user_overlay is None:
+                    user_overlay = User(
                         family=character.family
                     )
-                    user.save()
+                    user_overlay.save()
 
     return JsonResponse({'status': 'JSON importado com sucesso!'})
 
@@ -358,7 +358,7 @@ def import_json(request, user):
 @require_POST
 def reload_overlay(request, user):
 
-    overlay = Overlay.objects.filter(active=True).first()
+    overlay = Overlay.objects.filter(active=True, user=user).first()
 
     if overlay is None:
         return JsonResponse({'status': 'Não existe overlay ativo!'}, status=400)

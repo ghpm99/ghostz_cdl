@@ -9,6 +9,7 @@ class YoutubePlayList(models.Model):
     description = models.CharField(max_length=5000, null=True, blank=True)
     active = models.BooleanField(default=False)
     random = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
 
 class YoutubeVideo(models.Model):

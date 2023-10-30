@@ -62,7 +62,7 @@ def oauth2_callback(request):
     YoutubeCredentials.objects.update_or_create(
         user=user, defaults={'credentials': credentials_json})
 
-    return redirect(f'{settings.BASE_URL_FRONTEND}/settings/youtube')
+    return redirect(f'{settings.BASE_URL_FRONTEND}/youtube')
 
 
 def credentials_to_dict(credentials):
@@ -118,7 +118,7 @@ def load_playlist(request, user):
         snippet = item['snippet']
 
         playlist, created = YoutubePlayList.objects.update_or_create(
-            youtube_id=item.get('id'), defaults={
+            youtube_id=item.get('id'), user=user, defaults={
                 'title': snippet.get('title'), 'description': snippet.get('description')
             })
 
@@ -181,7 +181,7 @@ def playlist_item_to_youtube_video(playlist, playlist_item):
 @require_GET
 @validate_user
 def get_playlist(request, user):
-    youtube_playlist = YoutubePlayList.objects.all().annotate(count_video=Count('youtubevideo'))
+    youtube_playlist = YoutubePlayList.objects.filter(user=user).all().annotate(count_video=Count('youtubevideo'))
 
     data = [{
         'id': playlist.id,
@@ -204,14 +204,14 @@ def update_active_youtube_playlist(request, user):
     req = json.loads(request.body) if request.body else {}
 
     playlist_id = req.get('playlist_id')
-    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id).first()
+    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id, user=user).first()
     if youtube_playlist is None:
         return JsonResponse({'msg': 'Playlist não encontrada'}, status=404)
 
     youtube_playlist.active = True
     youtube_playlist.save()
 
-    active_playlist = YoutubePlayList.objects.filter(active=True).exclude(id=playlist_id).all()
+    active_playlist = YoutubePlayList.objects.filter(active=True, user=user).exclude(id=playlist_id).all()
     if active_playlist.__len__() > 0:
         for playlist in active_playlist:
             playlist.active = False
@@ -229,7 +229,7 @@ def update_random_youtube_playlist(request, user):
     playlist_id = req.get('playlist_id')
     random = req.get('random')
 
-    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id).first()
+    youtube_playlist = YoutubePlayList.objects.filter(id=playlist_id, user=user).first()
     if youtube_playlist is None:
         return JsonResponse({'msg': 'Playlist não encontrada'}, status=404)
 
@@ -244,14 +244,25 @@ def update_random_youtube_playlist(request, user):
 @validate_pusher_user
 def get_active_youtube_playlist(request, user):
 
+    active_youtube_playlist = YoutubePlayList.objects.filter(active=True, user=user).first()
+
+    order = '?' if active_youtube_playlist.random else 'position'
+
     active_youtube_videos = YoutubeVideo.objects.filter(
-        youtube_playlist__active=True, privacy='public'
-    ).exclude(status=YoutubeVideo.STATUS_ENDED).order_by('position')[:2]
+        youtube_playlist__user=user,
+        youtube_playlist__active=True,
+        privacy='public'
+    ).exclude(status=YoutubeVideo.STATUS_ENDED).order_by(order)[:2]
 
     if active_youtube_videos.__len__() < 2:
-        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
+        YoutubeVideo.objects.filter(
+            youtube_playlist__user=user,
+            youtube_playlist__active=True
+        ).update(status=YoutubeVideo.STATUS_QUEUE)
         active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, privacy='public'
+            youtube_playlist__user=user,
+            youtube_playlist__active=True,
+            privacy='public'
         ).order_by('position')[:2]
 
     data = [{
@@ -269,33 +280,48 @@ def get_active_youtube_playlist(request, user):
 @validate_pusher_user
 def next_video_playlist(request, user):
 
-    active_youtube_playlist = YoutubePlayList.objects.filter(active=True).first()
+    active_youtube_playlist = YoutubePlayList.objects.filter(active=True, user=user).first()
 
     if active_youtube_playlist is None:
-        active_youtube_playlist = YoutubePlayList.objects.first()
+        active_youtube_playlist = YoutubePlayList.objects.filter(user=user).first()
         active_youtube_playlist.active = True
         active_youtube_playlist.save()
 
     current_youtube_video = YoutubeVideo.objects.filter(
-        youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
+        youtube_playlist__user=user,
+        youtube_playlist__active=True,
+        status=YoutubeVideo.STATUS_PLAYING,
+        privacy='public'
     ).order_by('position').first()
 
     order = '?' if active_youtube_playlist.random else 'position'
-    print(order)
 
     if current_youtube_video is not None:
         active_youtube_video = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, position__gt=current_youtube_video.position, privacy='public'
+            youtube_playlist__user=user,
+            youtube_playlist__active=True,
+            position__gt=current_youtube_video.position,
+            privacy='public'
         ).order_by(order).first()
     else:
         active_youtube_video = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
+            youtube_playlist__user=user,
+            youtube_playlist__active=True,
+            status=YoutubeVideo.STATUS_QUEUE,
+            privacy='public'
         ).order_by(order).first()
 
     if active_youtube_video is None:
-        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
+        YoutubeVideo.objects.filter(
+            youtube_playlist__user=user,
+            youtube_playlist__active=True
+        ).update(
+            status=YoutubeVideo.STATUS_QUEUE
+        )
         active_youtube_video = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, privacy='public'
+            youtube_playlist__user=user,
+            youtube_playlist__active=True,
+            privacy='public'
         ).order_by(order).first()
 
     data = {
@@ -321,7 +347,7 @@ def set_state_youtube_video(request, user):
     if id is None or state is None:
         return JsonResponse({'msg': 'ok'})
 
-    youtube_video = YoutubeVideo.objects.filter(id=id).first()
+    youtube_video = YoutubeVideo.objects.filter(youtube_playlist__user=user, id=id).first()
 
     if youtube_video is None:
         return JsonResponse({'msg': 'ok'})
@@ -345,40 +371,23 @@ def set_state_youtube_video(request, user):
 @validate_user
 def skip_video_playlist(request, user):
 
-    active_youtube_playlist = YoutubePlayList.objects.filter(active=True).first()
+    active_youtube_playlist = YoutubePlayList.objects.filter(active=True, user=user).first()
 
     if active_youtube_playlist is None:
-        active_youtube_playlist = YoutubePlayList.objects.first()
+        active_youtube_playlist = YoutubePlayList.objects.filter(user=user).first()
         active_youtube_playlist.active = True
         active_youtube_playlist.save()
 
     current_youtube_video = YoutubeVideo.objects.filter(
-        youtube_playlist__active=True, status=YoutubeVideo.STATUS_PLAYING, privacy='public'
+        youtube_playlist__user=user,
+        youtube_playlist__active=True,
+        status=YoutubeVideo.STATUS_PLAYING,
+        privacy='public'
     ).all()
 
     for current in current_youtube_video:
         current.status = YoutubeVideo.STATUS_ENDED
         current.save()
 
-    order = '?' if active_youtube_playlist.random else 'position'
-    print(order)
-
-    active_youtube_videos = YoutubeVideo.objects.filter(
-        youtube_playlist__active=True, status=YoutubeVideo.STATUS_QUEUE, privacy='public'
-    ).order_by(order)[:2]
-
-    if active_youtube_videos.__len__() < 2:
-        YoutubeVideo.objects.filter(youtube_playlist__active=True).update(status=YoutubeVideo.STATUS_QUEUE)
-        active_youtube_videos = YoutubeVideo.objects.filter(
-            youtube_playlist__active=True, privacy='public'
-        ).order_by(order)[:2]
-
-    data = [{
-        'id': video.id,
-        'youtube_id': video.youtube_id,
-        'title': video.title,
-        'position': video.position or 0
-    } for video in active_youtube_videos]
-
-    pusher.send_next_video_youtube(data)
+    pusher.send_next_video_youtube('a')
     return JsonResponse({'msg': 'Evento disparado com sucesso'})
