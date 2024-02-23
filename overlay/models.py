@@ -69,7 +69,7 @@ class ImageBDOClass(models.Model):
 
 class User(models.Model):
     family = models.TextField(unique=True)
-    video = models.FileField(upload_to='customvideo/', null=True)
+    video = models.FileField(upload_to='customvideo/', null=True, blank=True)
 
     def __str__(self):
         return f'{self.family} {self.id}'
