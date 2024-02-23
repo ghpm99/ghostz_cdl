@@ -45,9 +45,17 @@ class ImageBDOClassConfig(admin.ModelAdmin):
     pass
 
 
+class UserVideoInline(admin.TabularInline):
+    model = UserVideo
+    fk_name = 'user'
+
+
 class UserConfig(admin.ModelAdmin):
     ordering = ['family']
     list_display = ('id', 'family')
+    inlines = [
+        UserVideoInline,
+    ]
     pass
 
 
